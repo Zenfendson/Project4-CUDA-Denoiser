@@ -2,9 +2,13 @@
 #include <ctime>
 #include "main.h"
 #include "preview.h"
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_opengl3.h"
+
+#include "../imgui/imgui.h"
+#include "../imgui/imgui_impl_glfw.h"
+#include "../imgui/imgui_impl_opengl3.h"
+
+#define IMGUI_IMPL_OPENGL_LOADER_GLEW
+
 GLuint positionLocation = 0;
 GLuint texcoordsLocation = 1;
 GLuint pbo;
@@ -159,15 +163,26 @@ bool init() {
 	if (glewInit() != GLEW_OK) {
 		return false;
 	}
-	printf("Opengl Version:%s\n", glGetString(GL_VERSION));
+	// printf("Opengl Version:%s\n", glGetString(GL_VERSION));
 	//Set up ImGui
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	io = &ImGui::GetIO(); (void)io;
-	ImGui::StyleColorsLight();
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 120");
+	// IMGUI_CHECKVERSION();
+	// ImGui::CreateContext();
+	// io = &ImGui::GetIO(); (void)io;
+	// ImGui::StyleColorsLight();
+	// ImGui_ImplGlfw_InitForOpenGL(window, true);
+	// ImGui_ImplOpenGL3_Init("#version 120");
+
+	glfwMakeContextCurrent(window);
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetCursorPosCallback(window, mousePositionCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
+    // Set up GL context
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        return false;
+    }
 
 	// Initialize other stuff
 	initVAO();
@@ -179,57 +194,68 @@ bool init() {
 	glUseProgram(passthroughProgram);
 	glActiveTexture(GL_TEXTURE0);
 
+	// Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    //// Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+
 	return true;
 }
 
-void InitImguiData(GuiDataContainer* guiData)
-{
-	imguiData = guiData;
-}
+static ImGuiWindowFlags windowFlags= ImGuiWindowFlags_None | ImGuiWindowFlags_NoMove;
+static bool ui_hide = false;
 
+void drawGui(int windowWidth, int windowHeight) {
+    // Dear imgui new frame
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
-// LOOK: Un-Comment to check ImGui Usage
-void RenderImGui()
-{
-	mouseOverImGuiWinow = io->WantCaptureMouse;
+    // Dear imgui define
+    ImVec2 minSize(300.f, 220.f);
+    ImVec2 maxSize((float)windowWidth * 0.5, (float)windowHeight * 0.3);
+    ImGui::SetNextWindowSizeConstraints(minSize, maxSize);
 
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
+    ImGui::SetNextWindowPos(ui_hide ? ImVec2(-1000.f, -1000.f) : ImVec2(0.0f, 0.0f));
 
-	bool show_demo_window = true;
-	bool show_another_window = false;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	static float f = 0.0f;
-	static int counter = 0;
+    ImGui::Begin("Control Panel", 0, windowFlags);
+    ImGui::SetWindowFontScale(1);
 
-	ImGui::Begin("Path Tracer Analytics");                  // Create a window called "Hello, world!" and append into it.
-	
-	// LOOK: Un-Comment to check the output window and usage
-	//ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-	//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-	//ImGui::Checkbox("Another Window", &show_another_window);
+    ImGui::Text("press H to hide GUI completely.");
+    if (ImGui::IsKeyPressed('H')) {
+        ui_hide = !ui_hide;
+    }
 
-	//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-	//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+    ImGui::SliderInt("Iterations", &ui_iterations, 1, startupIterations);
 
-	//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-	//	counter++;
-	//ImGui::SameLine();
-	//ImGui::Text("counter = %d", counter);
-	ImGui::Text("Traced Depth %d", imguiData->TracedDepth);
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::End();
+    ImGui::Checkbox("Denoise", &ui_denoise);
 
+    ImGui::SliderInt("Filter Size", &ui_filterSize, 0, 100);
+    ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 10.0f);
+    ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 10.0f);
+    ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 10.0f);
 
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui::Separator();
 
-}
+    ImGui::Checkbox("Show GBuffer", &ui_showGbuffer);
 
-bool MouseOverImGuiWindow()
-{
-	return mouseOverImGuiWinow;
+    ImGui::Separator();
+
+    if (ImGui::Button("Save image and exit")) {
+        ui_saveAndExit = true;
+    }
+
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void mainLoop() {
@@ -246,22 +272,16 @@ void mainLoop() {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Binding GL_PIXEL_UNPACK_BUFFER back to default
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        // VAO, shader program, and texture already bound
+        glDrawElements(GL_TRIANGLES, 6,  GL_UNSIGNED_SHORT, 0);
 
-		// VAO, shader program, and texture already bound
-		glDrawElements(GL_TRIANGLES, 6,  GL_UNSIGNED_SHORT, 0);
+        // Draw imgui
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        drawGui(display_w, display_h);
 
-		// Render ImGui Stuff
-		RenderImGui();
-
-		glfwSwapBuffers(window);
-	}
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-
-	glfwDestroyWindow(window);
-	glfwTerminate();
+        glfwSwapBuffers(window);
+    }
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }
