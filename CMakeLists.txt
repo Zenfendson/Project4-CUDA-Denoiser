@@ -73,17 +73,6 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
-    src/ImGui/imconfig.h
-	
-	src/ImGui/imgui.h
-    src/ImGui/imconfig.h
-    src/ImGui/imgui_impl_glfw.h
-     src/ImGui/imgui_impl_opengl3.h 
-     src/ImGui/imgui_impl_opengl3_loader.h 
-     src/ImGui/imgui_internal.h 
-     src/ImGui/imstb_rectpack.h 
-     src/ImGui/imstb_textedit.h 
-     src/ImGui/imstb_truetype.h 
     )
 
 set(sources
@@ -95,6 +84,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    )
 
 set(imgui
     imgui/imconfig.h

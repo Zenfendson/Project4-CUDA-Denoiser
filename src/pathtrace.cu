@@ -31,6 +31,8 @@
 
 #define IMAGE_DENOISE 0
 
+#define DENOISER_PROJECT4 1
+
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
@@ -83,7 +85,6 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 }
 
 static Scene* hst_scene = NULL;
-static GuiDataContainer* guiData = NULL;
 static glm::vec3* dev_image = NULL;
 static glm::vec3* dev_final_image = NULL;
 static Geom* dev_geoms = NULL;
@@ -209,11 +210,6 @@ void setPrefilter(
 }
 
 #endif
-
-void InitDataContainer(GuiDataContainer* imGuiData)
-{
-	guiData = imGuiData;
-}
 
 void pathtraceInit(Scene* scene) {
 	hst_scene = scene;
@@ -925,10 +921,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			iterationComplete = true; // TODO: should be based off stream compaction results.
 		};
 
-		if (guiData != NULL)
-		{
-			guiData->TracedDepth = depth;
-		}
 	}
 
 	// Assemble this iteration and apply it to the image
@@ -957,7 +949,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 #else
 
 	// Send results to OpenGL buffer for rendering
+#if not DENOISER_PROJECT4
 	sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, iter, dev_image);
+#endif
 	//cout << "sendImageToPBO finished" << endl;
 	// Retrieve image from GPU
 #endif
