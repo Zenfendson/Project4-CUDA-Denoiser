@@ -45,6 +45,14 @@ int iteration;
 int width;
 int height;
 
+cudaEvent_t start, stop;
+double pathTraceTime = 0;
+double pathTraceTimeTotal = 0;
+double denoiseTime = 0;
+double denoiseTimeTotal = 0;
+int denoiseIterations = 0;
+
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -88,8 +96,18 @@ int main(int argc, char** argv) {
 	ogLookAt = cam.lookAt;
 	zoom = glm::length(cam.position - ogLookAt);
 
+	pathTraceTime = 0;
+	pathTraceTimeTotal = 0;
+	denoiseTime = 0;
+	denoiseTimeTotal = 0;
+	denoiseIterations = 0;
+
 	// Initialize CUDA and GL components
 	init();
+
+
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
 
 	// GLFW main loop
 	mainLoop();
@@ -133,18 +151,25 @@ void runCuda() {
         cameraPosition.y = zoom * cos(theta);
         cameraPosition.z = zoom * cos(phi) * sin(theta);
 
-		cam.view = -glm::normalize(cameraPosition);
-		glm::vec3 v = cam.view;
-		glm::vec3 u = glm::vec3(0, 1, 0);//glm::normalize(cam.up);
-		glm::vec3 r = glm::cross(v, u);
-		cam.up = glm::cross(r, v);
-		cam.right = r;
+				cam.view = -glm::normalize(cameraPosition);
+				glm::vec3 v = cam.view;
+				glm::vec3 u = glm::vec3(0, 1, 0);//glm::normalize(cam.up);
+				glm::vec3 r = glm::cross(v, u);
+				cam.up = glm::cross(r, v);
+				cam.right = r;
 
-		cam.position = cameraPosition;
-		cameraPosition += cam.lookAt;
-		cam.position = cameraPosition;
-		camchanged = false;
-	}
+				cam.position = cameraPosition;
+				cameraPosition += cam.lookAt;
+				cam.position = cameraPosition;
+				camchanged = false;
+
+				pathTraceTime = 0;
+				pathTraceTimeTotal = 0;
+				denoiseTime = 0;
+				denoiseTimeTotal = 0;
+				denoiseIterations = 0;
+
+			}
 
 	// Map OpenGL buffer object for writing from CUDA on a single GPU
 	// No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
@@ -160,15 +185,39 @@ void runCuda() {
     if (iteration < ui_iterations) {
         iteration++;
 
+
+				cudaEventRecord(start);
         // execute the kernel
         int frame = 0;
         pathtrace(pbo_dptr, frame, iteration);
+
+				cudaEventRecord(stop);
+				cudaEventSynchronize(stop);
+				float ms = 0;
+				cudaEventElapsedTime(&ms, start, stop);
+
+				pathTraceTimeTotal += ms;
+				pathTraceTime = pathTraceTimeTotal / iteration;
+
     }
 
 		if (ui_denoise) {
 
-			runDenoiser(ui_filterSize, ui_colorWeight, ui_normalWeight, ui_positionWeight);
-			showDenoisedImage(pbo_dptr, ui_filterSize);
+		  cudaEventRecord(start);
+			runDenoiser(ui_filterSize, ui_colorWeight, ui_normalWeight, ui_positionWeight, iteration);
+
+
+			cudaEventRecord(stop);
+			cudaEventSynchronize(stop);
+			denoiseIterations++;
+
+			float ms = 0;
+			cudaEventElapsedTime(&ms, start, stop);
+			denoiseTimeTotal += ms;
+			denoiseTime = denoiseTimeTotal / denoiseIterations;
+
+
+			showDenoisedImage(pbo_dptr, iteration);
 		} else if (ui_showGbuffer) {
       showGBuffer(pbo_dptr);
     } else {

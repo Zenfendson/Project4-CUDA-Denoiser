@@ -142,6 +142,7 @@ void errorCallback(int error, const char* description) {
 }
 
 bool init() {
+
 	glfwSetErrorCallback(errorCallback);
 
 	if (!glfwInit()) {
@@ -238,9 +239,9 @@ void drawGui(int windowWidth, int windowHeight) {
     ImGui::Checkbox("Denoise", &ui_denoise);
 
     ImGui::SliderInt("Filter Size", &ui_filterSize, 0, 100);
-    ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 10.0f);
-    ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 10.0f);
-    ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 10.0f);
+    ImGui::SliderFloat("Color Weight", &ui_colorWeight, 0.0f, 1.0f);
+    ImGui::SliderFloat("Normal Weight", &ui_normalWeight, 0.0f, 1.0f);
+    ImGui::SliderFloat("Position Weight", &ui_positionWeight, 0.0f, 1.0f);
 
     ImGui::Separator();
 
@@ -269,7 +270,14 @@ void mainLoop() {
 
 		runCuda();
 
-		string title = "CIS565 Path Tracer | " + utilityCore::convertIntToString(iteration) + " Iterations";
+
+		std::ostringstream ss;
+		ss.precision(3);
+		ss << std::fixed << " | Path tracer: " << pathTraceTime << " ms | Denoiser: " << denoiseTime << " ms";
+		string title = "CIS565 Path Tracer | " + utilityCore::convertIntToString(iteration) + " Iterations" + ss.str();
+
+
+		//string title = "CIS565 Path Tracer | " + utilityCore::convertIntToString(iteration) + " Iterations";
 		glfwSetWindowTitle(window, title.c_str());
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
 		glBindTexture(GL_TEXTURE_2D, displayImage);

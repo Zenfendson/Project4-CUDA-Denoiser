@@ -386,7 +386,8 @@ __global__ void A_Trous_filter(
 	float c_phi, float n_phi, float p_phi, 
 	float stepWidth,
 	glm::vec3 *input_image,
-	glm::vec3 *output_image) {
+	glm::vec3 *output_image,
+	int iteration) {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;	
 	
@@ -420,30 +421,30 @@ __global__ void A_Trous_filter(
 		}
 
 		glm::vec3 ctmp = input_image[uvIdx];
-		glm::vec3 t = cval - ctmp;
+		glm::vec3 t = (cval - ctmp) / ((float)iteration);
 		float dist2 = glm::dot(t, t);
-		float c_w = min(glm::exp(-dist2 / c_phi), 1.0f);
+		float c_w = min(expf(-dist2 / c_phi), 1.0f);
 
 
 		glm::vec3 ntmp = gBuffer[uvIdx].normal;
 		t = nval - ntmp;
-		dist2 = max(dot(t, t) / (stepWidth * stepWidth), 0.0f);
-		float n_w = min(exp(-(dist2) / n_phi), 1.0f);
+		dist2 = max(dot(t, t) / (stepWidth * stepWidth), 0.f);
+		float n_w = min(expf(-(dist2) / n_phi), 1.0f);
 
 		glm::vec3 ptmp = gBuffer[uvIdx].position;
 		t = pval - ptmp;
 		dist2 = dot(t, t);
-		float p_w = min(exp(-(dist2) / p_phi), 1.0f);
+		float p_w = min(expf(-(dist2) / p_phi), 1.0f);
 
 		float weight = c_w * n_w * p_w;
 		sum += ctmp * weight * filter[i];
 		cum_w += weight * filter[i];
 	}
 
-	output_image[index] = sum / cum_w;
+	output_image[index] = sum / cum_w ;
 }
 
-void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p_phi) {
+void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p_phi, int iteration) {
 	
 	const Camera& cam = hst_scene->state.camera;
 
@@ -456,11 +457,11 @@ void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p
 
 	cudaMemcpy(dev_denoised_out, dev_image, pixelCount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
 
-	int num_iter = int(log2((ui_filterSize / 4.f))) + 1;
+	int num_iter = int(log2(((ui_filterSize - 1) / 4.f))) + 1;
 	float stepWidth = 1.f;
 	checkCUDAError("cudaMemcpy dev_denoised_tmp");
 	for (int i=0; i < num_iter; i++) {
-		stepWidth = stepWidth * 2.f;
+		
 
 		std::swap(dev_denoised_out, dev_denoised_tmp);
 
@@ -470,11 +471,12 @@ void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p
 			ui_c_phi, ui_n_phi, ui_p_phi,
 			stepWidth,
 			dev_denoised_tmp,
-			dev_denoised_out
+			dev_denoised_out,
+			iteration
 			);
-		//Fake_kernel << <blocksPerGrid2d, blockSize2d >> > (
-		//	cam
-		//	);
+
+		stepWidth = stepWidth * 2.f;
+
 		checkCUDAError("A_Trous_filter");
 	}
 
