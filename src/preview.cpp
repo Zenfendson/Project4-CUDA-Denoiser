@@ -246,7 +246,11 @@ void drawGui(int windowWidth, int windowHeight) {
 
     ImGui::Checkbox("Show GBuffer", &ui_showGbuffer);
 
-    ImGui::Separator();
+		ImGui::Separator();
+
+		//ImGui::Checkbox("Show denoised Image", &ui_denoise);
+
+    // ImGui::Separator();
 
     if (ImGui::Button("Save image and exit")) {
         ui_saveAndExit = true;

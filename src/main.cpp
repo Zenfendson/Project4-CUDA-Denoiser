@@ -165,7 +165,11 @@ void runCuda() {
         pathtrace(pbo_dptr, frame, iteration);
     }
 
-    if (ui_showGbuffer) {
+		if (ui_denoise) {
+
+			runDenoiser(ui_filterSize, ui_colorWeight, ui_normalWeight, ui_positionWeight);
+			showDenoisedImage(pbo_dptr, ui_filterSize);
+		} else if (ui_showGbuffer) {
       showGBuffer(pbo_dptr);
     } else {
       showImage(pbo_dptr, iteration);
