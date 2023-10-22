@@ -41,6 +41,8 @@ extern float ui_colorWeight;
 extern float ui_normalWeight;
 extern float ui_positionWeight;
 extern bool ui_saveAndExit;
+extern double pathTraceTime;
+extern double denoiseTime;
 
 void runCuda();
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);

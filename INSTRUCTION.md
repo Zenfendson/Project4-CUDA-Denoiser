@@ -197,9 +197,9 @@ The template of the comment section of your pull request is attached below, you 
 
 * [Repo Link](https://link-to-your-repo)
 * (Briefly) Mentions features that you've completed. Especially those bells and whistles you want to highlight
-    * Feature 0
-    * Feature 1
-    * ...
+  * Feature 0
+  * Feature 1
+  * ...
 * Feedback on the project itself, if any.
 
 References
