@@ -33,6 +33,8 @@
 
 #define DENOISER_PROJECT4 1
 
+#define GAUSSIAN_FILTER 0
+
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
@@ -366,20 +368,6 @@ __constant__ Offset offsets[25] = {
 		{-2, 2},  {-1, 2},  {0, 2},  {1, 2},  {2, 2}
 };
 
-
-void denoiserInit(const Camera& cam) {
-
-	const int pixelcount = cam.resolution.x * cam.resolution.y;
-
-	//int idx = 0;
-	//for (int i = -2; i <= 2; i++) {
-	//	for (int j = -2; j <= 2; j++) {
-	//		offsets[idx] = glm::vec2(i, j);
-	//		idx++;
-	//	}
-	//}
-}
-
 __global__ void A_Trous_filter(
 	Camera cam,
 	GBufferPixel *gBuffer,
@@ -444,6 +432,77 @@ __global__ void A_Trous_filter(
 	output_image[index] = sum / cum_w ;
 }
 
+__global__ void Gaussian_filter(
+	Camera cam,
+	GBufferPixel* gBuffer,
+	float c_phi, float n_phi, float p_phi,
+	glm::vec3* input_image,
+	glm::vec3* output_image,
+	int iteration,
+	int filterSize,
+	float sigma) {
+	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+	if (x >= cam.resolution.x && y >= cam.resolution.y) return;
+
+	glm::vec3 sum = glm::vec3(0.f);
+
+	int index = x + (y * cam.resolution.x);
+
+	glm::vec3 cval = input_image[index];
+	glm::vec3 nval = gBuffer[index].normal;
+	glm::vec3 pval = gBuffer[index].position;
+
+	int length = (filterSize) / 2;
+
+	float cum_w = 0.f;
+
+	for (int offset_u = -length; offset_u <= length; offset_u++) {
+		for (int offset_v = -length; offset_v <= length; offset_v++) {
+			glm::vec2 uv = glm::vec2(x + offset_u, y + offset_v);
+
+			//if (uv.x < 0 || uv.x >= cam.resolution.x || uv.y < 0 || uv.y >= cam.resolution.y) {
+			//	continue;
+			//}
+
+			if (uv.x < 0) uv.x = 0;
+			if (uv.x >= cam.resolution.x) uv.x = cam.resolution.x - 1;
+			if (uv.y < 0) uv.y = 0;
+			if (uv.y >= cam.resolution.y) uv.y = cam.resolution.y - 1;
+
+			int uvIdx = uv.x + (uv.y * cam.resolution.x);
+			if (uvIdx < 0 || uvIdx >= cam.resolution.x * cam.resolution.y) {
+				continue;
+			}
+
+			glm::vec3 ctmp = input_image[uvIdx];
+			glm::vec3 t = (cval - ctmp) / ((float)iteration);
+			float dist2 = glm::dot(t, t);
+			float c_w = min(expf(-dist2 / c_phi), 1.0f);
+
+			glm::vec3 ntmp = gBuffer[uvIdx].normal;
+			t = nval - ntmp;
+			dist2 = max(dot(t, t), 0.f);
+			float n_w = min(expf(-(dist2) / n_phi), 1.0f);
+
+			glm::vec3 ptmp = gBuffer[uvIdx].position;
+			t = pval - ptmp;
+			dist2 = dot(t, t);
+			float p_w = min(expf(-(dist2) / p_phi), 1.0f);
+
+			float weight = c_w * n_w * p_w;
+			//float filter = expf(-(offset_u * offset_u + offset_v * offset_v) / (2 * sigma * sigma)) / (2 * PI * sigma * sigma);
+			float filter = expf(-(offset_u * offset_u + offset_v * offset_v) / (2 * sigma * sigma));
+			sum += ctmp * weight * filter;
+			cum_w += weight * filter;
+		}
+	
+	}
+
+	output_image[index] = sum / cum_w;
+}
+
 void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p_phi, int iteration) {
 	
 	const Camera& cam = hst_scene->state.camera;
@@ -455,6 +514,20 @@ void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p
 
 	const int pixelCount = cam.resolution.x * cam.resolution.y;
 
+#if GAUSSIAN_FILTER 
+	float sigma = 1.f;
+
+	Gaussian_filter << <blocksPerGrid2d, blockSize2d >> > (
+		cam,
+		dev_gBuffer,
+		ui_c_phi, ui_n_phi, ui_p_phi,
+		dev_image,
+		dev_denoised_out,
+		iteration,
+		ui_filterSize,
+		sigma
+		);
+#else
 	cudaMemcpy(dev_denoised_out, dev_image, pixelCount * sizeof(glm::vec3), cudaMemcpyDeviceToDevice);
 
 	int num_iter = int(log2(((ui_filterSize - 1) / 4.f))) + 1;
@@ -479,6 +552,8 @@ void runDenoiser(float ui_filterSize, float ui_c_phi, float ui_n_phi, float ui_p
 
 		checkCUDAError("A_Trous_filter");
 	}
+
+#endif
 
 	cudaMemcpy(hst_scene->state.image.data(), dev_denoised_out, cam.resolution.x * cam.resolution.y * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 	checkCUDAError("runDenoiser");
