@@ -29,3 +29,30 @@ Simple visualizations for the normal and position info of the G-buffer.
 | Normal | Position |
 |---|---|
 |![](img/my_normal_G.png)|![](img/my_pos_G.png)|
+
+
+### Performance Analysis
+#### how much time denoising adds to your renders?
+when the denoiser is activated, it runs each time after the call of pathtracer().
+
+| pathtracing (with no denoiser) | pathtracing (with denoiser) |
+|---|---|
+| 79.23(milliseconds ) | 116.41(milliseconds) |
+
+#### how denoising influences the number of iterations needed to get an "acceptably smooth" result?
+
+| Denoised Output with 10 spp | Output with 500 spp | reference output at 5000 spp |
+|---|---|---|
+|![](img/intro_denoised.png)|![](img/500spp.png)|![](/img/ground_truth.png)|
+
+Denoising can achieve the same smoothness in image with far less render iterations. When looking at the denoisied image at 10 iterations, most of the noise can be removed except that there are some issues around the edge and shadow of the scene. But when we focus on the walls and the floor, the image quality is quite good. You can see 500 iterations of standard the pathtracer can achieve similar result. So the denoiser can save around 50x iterations to achieve similar result.
+
+#### how denoising at different resolutions impacts runtime?
+
+#### how varying filter sizes affect performance?
+
+#### how visual results vary with filter size -- does the visual quality scale uniformly with filter size?
+
+#### how effective/ineffective is this method with different material types?
+
+#### how do results compare across different scenes - for example, between cornell.txt and cornell_ceiling_light.txt. Does one scene produce better denoised results? Why or why not?
