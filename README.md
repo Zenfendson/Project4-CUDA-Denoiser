@@ -8,11 +8,13 @@ CUDA Denoiser For CUDA Path Tracer
 * Tested on: Windows 11, i7-12700k 32GB, GTX 4090 24GB
 
 ## Brief Intro
-This is a CUDA-based path tracer capable of rendering globally-illuminated images very quickly. \
-Why cuda? Because cuda is natively good at paralling rays and shading. To utiliza more parallism and improve occupancy, paths/rays are further divided into small path segments and processed in parallel. More performance improvement tricks are included in later part.
+This project focuses on implementing CUDA denoiser from the paper [Edge-Avoiding À-Trous Wavelet Transform for fast Global
+Illumination Filtering](https://jo.dreggn.org/home/2010_atrous.pdf)
 
 ### Details
-
+| raw | denoised |
+| -----| -----|
+|![](./img/intro_raw.png) | ![](./img/intro_denoised.png) |
 #### Ideal Diffuse surfaces and Perfectly specular-reflective (mirrored) surfaces
 
 ![](./img/image1.png)
