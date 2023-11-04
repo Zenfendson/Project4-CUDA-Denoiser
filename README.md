@@ -21,6 +21,10 @@ It approximates gaussian filter by iteratively applying sparse blurs of increasi
 ![](./img/filter_intro.png) 
 The above picture shows that using a 5x5 filter to achieve 16x16 blur.
 
+| raw | À-Trous Wavelet Filter (no G-buffer)| Blur from GLSL |
+|-----| ----- | ----- |
+|![](./img/intro_raw.png) | ![](./img/A_trous_wo_edge_avoid.png) |![](./img/raw_after_glmp_blur.png) |
+
 ### G-buffer 
 Edge-avoiding filtering is achieved by introducing a datadependent weighting function, which is related to weights calculated from the G-buffer that contains the normal and position data per-pixel.
 
@@ -29,6 +33,8 @@ Simple visualizations for the normal and position info of the G-buffer.
 | Normal | Position |
 |---|---|
 |![](img/my_normal_G.png)|![](img/my_pos_G.png)|
+
+
 
 
 ### Performance Analysis
@@ -73,3 +79,13 @@ Denoising can achieve the same smoothness in image with far less render iteratio
 | cornell | ![](img/cornell_original.png) | ![](img/cornell_denoised.png) |
 | cornell_ceiling_light | ![](img/original_cornell_light.png) | ![](img/denoised_cornell_light.png) |
 | cornell_light_emittance = 1 | ![](img/original_cornell_e1.png) | ![](img/denoised_cornell_e1.png) |
+
+### Comparing A-trous and Gaussian filtering
+
+| A-trous | Gaussian |
+|---|---|
+|![](img/A_wave_filter.png) | ![](img/gaussian_filter.png) |
+
+| A-trous | Gaussian |
+|---|---|
+| 6.85ms | 139.71ms |
