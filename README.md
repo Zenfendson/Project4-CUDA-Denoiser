@@ -45,15 +45,31 @@ when the denoiser is activated, it runs each time after the call of pathtracer()
 |---|---|---|
 |![](img/intro_denoised.png)|![](img/500spp.png)|![](/img/ground_truth.png)|
 
-Denoising can achieve the same smoothness in image with far less render iterations. When looking at the denoisied image at 10 iterations, most of the noise can be removed except that there are some issues around the edge and shadow of the scene. But when we focus on the walls and the floor, the image quality is quite good. You can see 500 iterations of standard the pathtracer can achieve similar result. So the denoiser can save around 50x iterations to achieve similar result.
+Denoising can achieve the same smoothness in image with far less render iterations. When looking at the denoisied image at 10 iterations, most of the noise can be removed except that there are some issues around the edge and shadow of the scene. But when we focus on the walls and the floor, the image quality is quite good. You can see 500 iterations of standard the pathtracer can achieve similar result. So the denoiser can save around  50x iterations to achieve similar result.
 
 #### how denoising at different resolutions impacts runtime?
 ![](./img/denoiser_runtime_resolution_(filter_size=80%20_%2080).png)
 
 #### how varying filter sizes affect performance?
+![](./img/Denoiser_runtime_VS_Filter_size_(resolution=1600%20_1600_10spp).png)
 
 #### how visual results vary with filter size -- does the visual quality scale uniformly with filter size?
 
+| 10 * 10 filter | 20 * 20 filter | 40 * 40 filter |  80 * 80 filter |
+|---|---|---|---|
+|![](img/10_10.png) | ![](img/20_20.png) | ![](img/40_40.png) | ![](img/80_80.png) |
+
 #### how effective/ineffective is this method with different material types?
+10spp
+| Matarial Type | Original  | Denoised |
+|---|---|---|
+| Diffuse | ![](img/diffuse_original.png) | ![](img/diffuse.png) |
+| Specular | ![](img/specular_original.png) | ![](img/specular.png) |
 
 #### how do results compare across different scenes - for example, between cornell.txt and cornell_ceiling_light.txt. Does one scene produce better denoised results? Why or why not?
+
+| scene | Original | Denoised |
+|---|---|---|
+| cornell | ![](img/cornell_original.png) | ![](img/cornell_denoised.png) |
+| cornell_ceiling_light | ![](img/original_cornell_light.png) | ![](img/denoised_cornell_light.png) |
+| cornell_light_emittance = 1 | ![](img/original_cornell_e1.png) | ![](img/denoised_cornell_e1.png) |
