@@ -48,6 +48,7 @@ when the denoiser is activated, it runs each time after the call of pathtracer()
 Denoising can achieve the same smoothness in image with far less render iterations. When looking at the denoisied image at 10 iterations, most of the noise can be removed except that there are some issues around the edge and shadow of the scene. But when we focus on the walls and the floor, the image quality is quite good. You can see 500 iterations of standard the pathtracer can achieve similar result. So the denoiser can save around 50x iterations to achieve similar result.
 
 #### how denoising at different resolutions impacts runtime?
+![](./img/denoiser_runtime_resolution_(filter_size=80%20_%2080).png)
 
 #### how varying filter sizes affect performance?
 
